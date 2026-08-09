@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Constructor: Informe de Contrarreferencia MINSA</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body class="bg-gradient-to-br from-purple-50 to-pink-50 min-h-screen">
+  <div id="app"></div>
+
+  <script>
+    // MEDICAMENTOS FRECUENTES
+    const medicamentos = [
+      { nombre: "Sertralina", dosis: "50 mg", frecuencia: "1 vez/día" },
+      { nombre: "Fluoxetina", dosis: "20 mg", frecuencia: "1 vez/día" },
+      { nombre: "Risperidona", dosis: "2-4 mg", frecuencia: "2 veces/día" },
+      { nombre: "Haloperidol", dosis: "5 mg", frecuencia: "1-2 veces/día" },
+      { nombre: "Buprenorfina", dosis: "8-16 mg", frecuencia: "1 vez/día" },
+      { nombre: "Metadona", dosis: "20-100 mg", frecuencia: "1 vez/día" },
+      { nombre: "Alprazolam", dosis: "0.5-1 mg", frecuencia: "2-3 veces/día" },
+      { nombre: "Lorazepam", dosis: "1-2 mg", frecuencia: "2-3 veces/día" }
+    ];
+
+    // STATE
+    let state = {
+      step: 1,
+      formData: {
+        fechaAlta: new Date().toISOString().split('T')[0],
+        establecimientoOrigen: "",
+        nombrePaciente: "",
+        dniPaciente: "",
+        diagnosticoFinal: "",
+        resumenEvolucion: "",
+        medicacionContinuada: [],
+        medicacionNueva: "",
+        planSeguimiento: "",
+        frecuenciaSeguimiento: "mensual",
+        indicadoresReconsulta: "",
+        accesoCSMC: "",
+        educacionFamilia: "",
+        recursosComunidad: "",
+        nombreProfesional: "",
+        dniProfesional: "",
+        nombreEstablecimientoDestino: ""
+      },
+      medicacionTemporal: { nombre: "", dosis: "", frecuencia: "" }
+    };
+
+    // FUNCIONES
+    function handleInputChange(field, value) {
+      state.formData[field] = value;
+      render();
+    }
+
+    function agregarMedicacion() {
+      if (state.medicacionTemporal.nombre && state.medicacionTemporal.dosis && state.medicacionTemporal.frecuencia) {
+        state.formData.medicacionContinuada.push({...state.medicacionTemporal});
+        state.medicacionTemporal = { nombre: "", dosis: "", frecuencia: "" };
+        render();
+      }
+    }
+
+    function removerMedicacion(index) {
+      state.formData.medicacionContinuada.splice(index, 1);
+      render();
+    }
+
+    function seleccionarMedicamentoPredefinido(med) {
+      state.medicacionTemporal = {...med};
+      render();
+    }
+
+    function handleNextStep() {
+      if (state.step < 5) {
+        state.step++;
+      } else {
+        state.step = 6; // Revisión final
+      }
+      render();
+    }
+
+    function handlePrevStep() {
+      if (state.step > 1) {
+        state.step--;
+      }
+      render();
+    }
+
+    function isStepValid() {
+      switch (state.step) {
+        case 1:
+          return state.formData.fechaAlta && state.formData.establecimientoOrigen;
+        case 2:
+          return state.formData.nombrePaciente && state.formData.dniPaciente && state.formData.diagnosticoFinal;
+        case 3:
+          return state.formData.medicacionContinuada.length > 0;
+        case 4:
+          return state.formData.planSeguimiento && state.formData.frecuenciaSeguimiento && state.formData.indicadoresReconsulta;
+        case 5:
+          return state.formData.nombreProfesional && state.formData.dniProfesional && state.formData.nombreEstablecimientoDestino;
+        default:
+          return false;
+      }
+    }
+
+    function generatePDF() {
+      const element = document.getElementById('contrarreferenciContent');
+      const opt = {
+        margin: 10,
+        filename: `contrarreferencia_${state.formData.dniPaciente}_${state.formData.fechaAlta}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+      };
+      html2pdf().set(opt).from(element).save();
+    }
+
+    function handleGenerarFinal() {
+      state.step = 7; // Vista final + descarga
+      render();
+    }
+
+    // RENDER STEPS
+    function renderStep1() {
+      return `
+        <div class="max-w-2xl mx-auto p-6">
+          <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="mb-6">
+              <h2 class="text-2xl font-bold text-purple-900">PASO 1: INFORMACIÓN ADMINISTRATIVA</h2>
+              <p class="text-gray-600 text-sm mt-2">Datos del establecimiento y fecha de alta</p>
+            </div>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">📅 Fecha de Alta</label>
+                <input type="date" value="${state.formData.fechaAlta}" 
+                  onchange="handleInputChange('fechaAlta', this.value)"
+                  class="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-purple-500 focus:outline-none">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">🏥 Establecimiento de Origen (donde fue atendido)</label>
+                <input type="text" placeholder="Ej: Centro de Salud Mental Comunitario María Auxiliadora" 
+                  value="${state.formData.establecimientoOrigen}"
+                  onchange="handleInputChange('establecimientoOrigen', this.value)"
+                  class="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-purple-500 focus:outline-none">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">↩️ Establecimiento Destino (I Nivel receptor)</label>
+                <input type="text" placeholder="Ej: Centro de Salud San Martín" 
+                  value="${state.formData.nombreEstablecimientoDestino}"
+                  onchange="handleInputChange('nombreEstablecimientoDestino', this.value)"
+                  class="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-purple-500 focus:outline-none">
+              </div>
+            </div>
+
+            <div class="mt-8 flex gap-3">
+              <button onclick="handleNextStep()" class="${isStepValid() ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-400 cursor-not-allowed'} text-white font-bold py-3 px-6 rounded-lg transition flex-1">
+                Siguiente →
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderStep2() {
+      return `
+        <div class="max-w-2xl mx-auto p-6">
+          <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="mb-6">
+              <h2 class="text-2xl font-bold text-purple-900">PASO 2: DATOS DEL PACIENTE Y DIAGNÓSTICO</h2>
+              <p class="text-gray-600 text-sm mt-2">Información clínica final</p>
+            </div>
+
+            <div class="space-y-4">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre Completo</label>
+                  <input type="text" placeholder="Ej: Juan Mendoza López"
+                    value="${state.formData.nombrePaciente}"
+                    onchange="handleInputChange('nombrePaciente', this.value)"
+                    class="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-purple-500 focus:outline-none">
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">DNI</label>
+                  <input type="text" placeholder="Ej: 12345678"
+                    value="${state.formData.dniPaciente}"
+                    onchange="handleInputChange('dniPaciente', this.value)"
+                    class="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-purple-500 focus:outline-none">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Diagnóstico Final (CIE-10)</label>
+                <input type="text" placeholder="Ej: F321 - Depresión moderada"
+                  value="${state.formData.diagnosticoFinal}"
+                  onchange="handleInputChange('diagnosticoFinal', this.value)"
+                  class="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-purple-500 focus:outline-none">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Resumen de Evolución</label>
+                <textarea placeholder="Ej: Paciente presentó mejoría progresiva. PHQ-9 inicial 19 → Final 7 (remisión). Adherencia medicación >90%. Participó en 12 sesiones psicoterapia individual + 8 sesiones grupo."
+                  value="${state.formData.resumenEvolucion}"
+                  onchange="handleInputChange('resumenEvolucion', this.value)"
+                  class="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-purple-500 focus:outline-none h-24"></textarea>
+              </div>
+            </div>
+
+            <div class="mt-8 flex gap-3">
+              <button onclick="handlePrevStep()" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition flex-1">
+                ← Atrás
+              </button>
+              <button onclick="handleNextStep()" class="${isStepValid() ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-400 cursor-not-allowed'} text-white font-bold py-3 px-6 rounded-lg transition flex-1">
+                Siguiente →
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderStep3() {
+      return `
+        <div class="max-w-2xl mx-auto p-6">
+          <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="mb-6">
+              <h2 class="text-2xl font-bold text-purple-900">PASO 3: MEDICACIÓN CONTINUADA</h2>
+              <p class="text-gray-600 text-sm mt-2">¿Qué medicamentos continúan en I Nivel?</p>
+            </div>
+
+            <!-- Medicamentos agregados -->
+            ${state.formData.medicacionContinuada.length > 0 ? `
+              <div class="mb-6 space-y-2">
+                <p class="text-sm font-semibold text-gray-700">Medicamentos agregados:</p>
+                ${state.formData.medicacionContinuada.map((med, idx) => `
+                  <div class="bg-purple-50 p-3 rounded-lg border-l-4 border-purple-500 flex justify-between items-center">
+                    <div>
+                      <p class="font-semibold text-gray-900">${med.nombre}</p>
+                      <p class="text-sm text-gray-700">${med.dosis} - ${med.frecuencia}</p>
+                    </div>
+                    <button onclick="removerMedicacion(${idx})" class="text-red-600 hover:text-red-700 font-bold">✕</button>
+                  </div>
+                `).join('')}
+              </div>
+            ` : ''}
+
+            <!-- Agregar medicación -->
+            <div class="bg-gray-50 p-4 rounded-lg mb-6">
+              <p class="text-sm font-semibold text-gray-700 mb-3">Agregar medicación:</p>
+              <div class="space-y-3">
+                <input type="text" placeholder="Nombre medicamento" 
+                  value="${state.medicacionTemporal.nombre}"
+                  onchange="(e) => {state.medicacionTemporal.nombre = e.target.value; render();}"
+                  class="w-full border-2 border-gray-300 rounded-lg p-2 text-sm focus:border-purple-500 focus:outline-none">
+                
+                <div class="grid grid-cols-2 gap-2">
+                  <input type="text" placeholder="Dosis (ej: 50 mg)" 
+                    value="${state.medicacionTemporal.dosis}"
+                    onchange="(e) => {state.medicacionTemporal.dosis = e.target.value; render();}"
+                    class="border-2 border-gray-300 rounded-lg p-2 text-sm focus:border-purple-500 focus:outline-none">
+                  
+                  <input type="text" placeholder="Frecuencia (ej: 1 vez/día)" 
+                    value="${state.medicacionTemporal.frecuencia}"
+                    onchange="(e) => {state.medicacionTemporal.frecuencia = e.target.value; render();}"
+                    class="border-2 border-gray-300 rounded-lg p-2 text-sm focus:border-purple-500 focus:outline-none">
+                </div>
+
+                <button onclick="agregarMedicacion()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition">
+                  ➕ Agregar Medicación
+                </button>
+              </div>
+            </div>
+
+            <!-- Medicamentos predefinidos -->
+            <div class="mb-6">
+              <p class="text-sm font-semibold text-gray-700 mb-3">Medicamentos frecuentes (click para cargar):</p>
+              <div class="grid grid-cols-2 gap-2">
+                ${medicamentos.map((med, idx) => `
+                  <button onclick="seleccionarMedicamentoPredefinido({nombre: '${med.nombre}', dosis: '${med.dosis}', frecuencia: '${med.frecuencia}'})"
+                    class="text-left text-sm p-2 border-2 border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition">
+                    <p class="font-semibold text-gray-900">${med.nombre}</p>
+                    <p class="text-xs text-gray-600">${med.dosis}</p>
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+
+            <div class="mt-8 flex gap-3">
+              <button onclick="handlePrevStep()" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition flex-1">
+                ← Atrás
+              </button>
+              <button onclick="handleNextStep()" class="${isStepValid() ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-400 cursor-not-allowed'} text-white font-bold py-3 px-6 rounded-lg transition flex-1">
+                Siguiente →
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderStep4() {
+      return `
+        <div class="max-w-2xl mx-auto p-6">
+          <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="mb-6">
+              <h2 class="text-2xl font-bold text-purple-900">PASO 4: PLAN DE SEGUIMIENTO</h2>
+              <p class="text-gray-600 text-sm mt-2">Continuidad en I Nivel + protección de recaída</p>
+            </div>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Plan de Seguimiento Específico</label>
+                <textarea placeholder="Ej: Seguimiento mensual con enfermera de salud mental. Evaluación clínica + monitoreo medicación + psicoeducación familia."
+                  value="${state.formData.planSeguimiento}"
+                  onchange="handleInputChange('planSeguimiento', this.value)"
+                  class="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-purple-500 focus:outline-none h-20"></textarea>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Frecuencia de Consultas</label>
+                <select onchange="handleInputChange('frecuenciaSeguimiento', this.value)"
+                  class="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-purple-500 focus:outline-none">
+                  <option value="semanal" ${state.formData.frecuenciaSeguimiento === 'semanal' ? 'selected' : ''}>Semanal</option>
+                  <option value="quincenal" ${state.formData.frecuenciaSeguimiento === 'quincenal' ? 'selected' : ''}>Quincenal</option>
+                  <option value="mensual" ${state.formData.frecuenciaSeguimiento === 'mensual' ? 'selected' : ''}>Mensual</option>
+                  <option value="bimestral" ${state.formData.frecuenciaSeguimiento === 'bimestral' ? 'selected' : ''}>Bimestral</option>
+                  <option value="trimestral" ${state.formData.frecuenciaSeguimiento === 'trimestral' ? 'selected' : ''}>Trimestral</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Indicadores de Reconsulta URGENTE</label>
+                <textarea placeholder="Ej: Si PHQ-9 vuelve >12 puntos. Si ideación suicida reaparece. Si abandona medicación >1 semana. Si síntomas psicóticos retornan."
+                  value="${state.formData.indicadoresReconsulta}"
+                  onchange="handleInputChange('indicadoresReconsulta', this.value)"
+                  class="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-purple-500 focus:outline-none h-20"></textarea>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Acceso CSMC (Puerta Abierta)</label>
+                <textarea placeholder="Ej: Puerta abierta para reconsulta en CSMC si síntomas reaparecen. Readmisión no requiere nueva derivación formal."
+                  value="${state.formData.accesoCSMC}"
+                  onchange="handleInputChange('accesoCSMC', this.value)"
+                  class="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-purple-500 focus:outline-none h-16"></textarea>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Educación a la Familia</label>
+                <textarea placeholder="Ej: Familia orientada en reconocimiento de síntomas de alerta. Plan de crisis: si empeora acudir a CSMC o centro de emergencia."
+                  value="${state.formData.educacionFamilia}"
+                  onchange="handleInputChange('educacionFamilia', this.value)"
+                  class="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-purple-500 focus:outline-none h-16"></textarea>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Recursos de Comunidad (opcional)</label>
+                <textarea placeholder="Ej: Grupo de autoayuda los jueves. Programa ocupacional ONG. Teléfono línea crisis 080."
+                  value="${state.formData.recursosComunidad}"
+                  onchange="handleInputChange('recursosComunidad', this.value)"
+                  class="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-purple-500 focus:outline-none h-16"></textarea>
+              </div>
+            </div>
+
+            <div class="mt-8 flex gap-3">
+              <button onclick="handlePrevStep()" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition flex-1">
+                ← Atrás
+              </button>
+              <button onclick="handleNextStep()" class="${isStepValid() ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-400 cursor-not-allowed'} text-white font-bold py-3 px-6 rounded-lg transition flex-1">
+                Siguiente →
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderStep5() {
+      return `
+        <div class="max-w-2xl mx-auto p-6">
+          <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="mb-6">
+              <h2 class="text-2xl font-bold text-purple-900">PASO 5: DATOS DEL PROFESIONAL</h2>
+              <p class="text-gray-600 text-sm mt-2">Quien firma la contrarreferencia</p>
+            </div>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre y Profesión</label>
+                <input type="text" placeholder="Ej: Psic. Carlos Ruiz Mendoza - Psicólogo Clínico"
+                  value="${state.formData.nombreProfesional}"
+                  onchange="handleInputChange('nombreProfesional', this.value)"
+                  class="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-purple-500 focus:outline-none">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">DNI Profesional</label>
+                <input type="text" placeholder="Ej: 87654321"
+                  value="${state.formData.dniProfesional}"
+                  onchange="handleInputChange('dniProfesional', this.value)"
+                  class="w-full border-2 border-gray-300 rounded-lg p-3 focus:border-purple-500 focus:outline-none">
+              </div>
+            </div>
+
+            <div class="mt-6 p-4 bg-purple-50 border-l-4 border-purple-500 rounded">
+              <p class="text-sm text-purple-900">
+                <strong>Recordatorio MINSA:</strong><br>
+                ✓ Código actividad: 99217 (Atención de alta)<br>
+                ✓ Tipo de alta: 4 (Ref/Contrarreferencia)<br>
+                ✓ Firma y sello obligatorios<br>
+                ✓ Copia para paciente + establecimiento receptor
+              </p>
+            </div>
+
+            <div class="mt-8 flex gap-3">
+              <button onclick="handlePrevStep()" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition flex-1">
+                ← Atrás
+              </button>
+              <button onclick="handleGenerarFinal()" class="${isStepValid() ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-400 cursor-not-allowed'} text-white font-bold py-3 px-6 rounded-lg transition flex-1">
+                Revisar y Generar →
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderFinal() {
+      return `
+        <div class="max-w-4xl mx-auto p-6">
+          <div class="bg-white rounded-lg shadow-lg p-8">
+            <div class="mb-8" id="contrarreferenciContent">
+              <div class="border-b-4 border-purple-600 pb-4 mb-6">
+                <h1 class="text-2xl font-bold text-gray-900">INFORME DE CONTRARREFERENCIA</h1>
+                <p class="text-sm text-gray-600 mt-2">Protocolo MINSA 2025 - Sección Egreso/Alta (Tipo 4)</p>
+              </div>
+
+              <div class="grid grid-cols-3 gap-4 mb-8">
+                <div>
+                  <p class="text-xs text-gray-500 font-semibold uppercase">Código Actividad</p>
+                  <p class="font-bold text-purple-900">99217</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 font-semibold uppercase">Tipo de Alta</p>
+                  <p class="font-bold text-purple-900">4 - Ref/Contrarreferencia</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 font-semibold uppercase">Fecha de Alta</p>
+                  <p class="font-bold text-purple-900">${state.formData.fechaAlta}</p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-6 mb-8">
+                <div>
+                  <p class="text-xs text-gray-500 font-semibold uppercase">Establecimiento de Origen</p>
+                  <p class="font-bold text-gray-900">${state.formData.establecimientoOrigen}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 font-semibold uppercase">Establecimiento Destino (I Nivel)</p>
+                  <p class="font-bold text-gray-900">${state.formData.nombreEstablecimientoDestino}</p>
+                </div>
+              </div>
+
+              <div class="border-l-4 border-blue-500 bg-blue-50 p-4 mb-8 rounded">
+                <p class="text-sm font-semibold text-blue-900 uppercase">Datos del Paciente</p>
+                <p class="text-sm text-gray-800 mt-2"><strong>Nombre:</strong> ${state.formData.nombrePaciente}</p>
+                <p class="text-sm text-gray-800"><strong>DNI:</strong> ${state.formData.dniPaciente}</p>
+              </div>
+
+              <div class="border-l-4 border-red-500 bg-red-50 p-4 mb-8 rounded">
+                <p class="text-sm font-semibold text-red-900 uppercase">Diagnóstico Final</p>
+                <p class="text-sm text-gray-800 mt-2">${state.formData.diagnosticoFinal}</p>
+              </div>
+
+              <div class="border-l-4 border-green-500 bg-green-50 p-4 mb-8 rounded">
+                <p class="text-sm font-semibold text-green-900 uppercase">Resumen de Evolución y Logros</p>
+                <p class="text-sm text-gray-800 mt-2 whitespace-pre-wrap">${state.formData.resumenEvolucion}</p>
+              </div>
+
+              <div class="border-l-4 border-orange-500 bg-orange-50 p-4 mb-8 rounded">
+                <p class="text-sm font-semibold text-orange-900 uppercase">Medicación Continuada (en I Nivel)</p>
+                ${state.formData.medicacionContinuada.length > 0 ? `
+                  <div class="mt-2 space-y-2">
+                    ${state.formData.medicacionContinuada.map(med => `
+                      <p class="text-sm text-gray-800">• <strong>${med.nombre}</strong>: ${med.dosis} - ${med.frecuencia}</p>
+                    `).join('')}
+                  </div>
+                ` : `<p class="text-sm text-gray-800 mt-2">Sin medicación</p>`}
+              </div>
+
+              <div class="border-l-4 border-yellow-500 bg-yellow-50 p-4 mb-8 rounded">
+                <p class="text-sm font-semibold text-yellow-900 uppercase">Plan de Seguimiento</p>
+                <p class="text-sm text-gray-800 mt-2 whitespace-pre-wrap"><strong>Plan:</strong> ${state.formData.planSeguimiento}</p>
+                <p class="text-sm text-gray-800 mt-2"><strong>Frecuencia:</strong> ${state.formData.frecuenciaSeguimiento.charAt(0).toUpperCase() + state.formData.frecuenciaSeguimiento.slice(1)}</p>
+              </div>
+
+              <div class="border-l-4 border-red-600 bg-red-50 p-4 mb-8 rounded">
+                <p class="text-sm font-semibold text-red-900 uppercase">Indicadores de Reconsulta Urgente</p>
+                <p class="text-sm text-gray-800 mt-2 whitespace-pre-wrap">${state.formData.indicadoresReconsulta}</p>
+              </div>
+
+              <div class="border-l-4 border-cyan-500 bg-cyan-50 p-4 mb-8 rounded">
+                <p class="text-sm font-semibold text-cyan-900 uppercase">Acceso CSMC (Puerta Abierta)</p>
+                <p class="text-sm text-gray-800 mt-2 whitespace-pre-wrap">${state.formData.accesoCSMC}</p>
+              </div>
+
+              <div class="border-l-4 border-purple-500 bg-purple-50 p-4 mb-8 rounded">
+                <p class="text-sm font-semibold text-purple-900 uppercase">Educación a la Familia</p>
+                <p class="text-sm text-gray-800 mt-2 whitespace-pre-wrap">${state.formData.educacionFamilia}</p>
+              </div>
+
+              ${state.formData.recursosComunidad ? `
+                <div class="border-l-4 border-pink-500 bg-pink-50 p-4 mb-8 rounded">
+                  <p class="text-sm font-semibold text-pink-900 uppercase">Recursos Comunitarios</p>
+                  <p class="text-sm text-gray-800 mt-2 whitespace-pre-wrap">${state.formData.recursosComunidad}</p>
+                </div>
+              ` : ''}
+
+              <div class="border-t-2 border-gray-300 pt-6 mt-8">
+                <p class="text-sm font-semibold text-gray-700 uppercase mb-4">Profesional Responsable</p>
+                <p class="text-sm text-gray-800"><strong>${state.formData.nombreProfesional}</strong></p>
+                <p class="text-sm text-gray-800">DNI: ${state.formData.dniProfesional}</p>
+                <p class="text-sm text-gray-600 mt-6">_________________________</p>
+                <p class="text-xs text-gray-600">Firma y Sello</p>
+              </div>
+            </div>
+
+            <div class="mt-8 flex gap-3">
+              <button onclick="handlePrevStep()" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition flex-1">
+                ← Editar
+              </button>
+              <button onclick="generatePDF()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition flex-1">
+                📥 Descargar PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function render() {
+      const app = document.getElementById('app');
+      
+      let html = `
+        <div class="min-h-screen pb-10">
+          <div class="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-6">
+            <div class="max-w-4xl mx-auto px-6">
+              <h1 class="text-3xl font-bold">Constructor: Informe de Contrarreferencia MINSA</h1>
+              <p class="text-purple-100 mt-2">Protocolo - Alta por Referencia/Contrarreferencia (Tipo 4)</p>
+            </div>
+          </div>
+      `;
+
+      if (state.step < 6) {
+        const progressPercent = (state.step / 5) * 100;
+        html += `
+          <div class="max-w-4xl mx-auto px-6 mt-6">
+            <div class="bg-white rounded-lg shadow p-4">
+              <p class="text-sm font-semibold text-gray-700 mb-2">Progreso: Paso ${state.step}/5</p>
+              <div class="w-full bg-gray-200 rounded-full h-3">
+                <div class="bg-purple-600 h-3 rounded-full transition-all" style="width: ${progressPercent}%"></div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (state.step === 1) {
+        html += renderStep1();
+      } else if (state.step === 2) {
+        html += renderStep2();
+      } else if (state.step === 3) {
+        html += renderStep3();
+      } else if (state.step === 4) {
+        html += renderStep4();
+      } else if (state.step === 5) {
+        html += renderStep5();
+      } else if (state.step === 7) {
+        html += renderFinal();
+      }
+
+      html += `</div>`;
+      app.innerHTML = html;
+    }
+
+    // GLOBAL FUNCTIONS
+    window.handleInputChange = handleInputChange;
+    window.handleNextStep = handleNextStep;
+    window.handlePrevStep = handlePrevStep;
+    window.handleGenerarFinal = handleGenerarFinal;
+    window.generatePDF = generatePDF;
+    window.agregarMedicacion = agregarMedicacion;
+    window.removerMedicacion = removerMedicacion;
+    window.seleccionarMedicamentoPredefinido = seleccionarMedicamentoPredefinido;
+
+    // INITIAL RENDER
+    render();
+  </script>
+</body>
+</html>
