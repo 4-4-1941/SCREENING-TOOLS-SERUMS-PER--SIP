@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Formato Contrarreferencia MINSA - Interactivo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+      color: #333;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 8px 8px 0 0;
+      text-align: center;
+      margin-bottom: 0;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+
+    .header p {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    .documento {
+      background: white;
+      border: 2px solid #9b59b6;
+      padding: 30px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .seccion {
+      margin-bottom: 25px;
+      border-left: 4px solid #9b59b6;
+      padding-left: 15px;
+    }
+
+    .seccion-titulo {
+      font-size: 14px;
+      font-weight: bold;
+      color: #8e44ad;
+      text-transform: uppercase;
+      margin-bottom: 15px;
+      letter-spacing: 1px;
+    }
+
+    .fila {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 15px;
+    }
+
+    .fila.completa {
+      grid-template-columns: 1fr;
+    }
+
+    .campo {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .campo label {
+      font-size: 12px;
+      font-weight: bold;
+      color: #555;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .campo input,
+    .campo select,
+    .campo textarea {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: Arial, sans-serif;
+      transition: all 0.3s ease;
+    }
+
+    .campo input:focus,
+    .campo select:focus,
+    .campo textarea:focus {
+      outline: none;
+      border-color: #9b59b6;
+      box-shadow: 0 0 5px rgba(155, 89, 182, 0.3);
+    }
+
+    .campo textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    /* INDICADORES DE VALIDACIÓN */
+    .campo.valido input,
+    .campo.valido select,
+    .campo.valido textarea {
+      border-color: #8e44ad;
+      background-color: #f4f0f8;
+    }
+
+    .campo.error input,
+    .campo.error select,
+    .campo.error textarea {
+      border-color: #e74c3c;
+      background-color: #fef2f2;
+    }
+
+    .campo.advertencia input,
+    .campo.advertencia select,
+    .campo.advertencia textarea {
+      border-color: #f39c12;
+      background-color: #fffbf0;
+    }
+
+    .indicador {
+      display: flex;
+      align-items: center;
+      margin-top: 5px;
+      font-size: 12px;
+      height: 18px;
+    }
+
+    .indicador.valido {
+      color: #8e44ad;
+    }
+
+    .indicador.error {
+      color: #e74c3c;
+    }
+
+    .indicador.advertencia {
+      color: #f39c12;
+    }
+
+    .indicador.neutro {
+      color: #999;
+    }
+
+    .indicador::before {
+      margin-right: 5px;
+      font-weight: bold;
+    }
+
+    .indicador.valido::before {
+      content: "✓";
+    }
+
+    .indicador.error::before {
+      content: "✗";
+    }
+
+    .indicador.advertencia::before {
+      content: "⚠";
+    }
+
+    .indicador.neutro::before {
+      content: "○";
+    }
+
+    /* PANEL ASISTENTE */
+    .asistente {
+      background: #f4f0f8;
+      border-left: 4px solid #9b59b6;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 4px;
+      display: none;
+    }
+
+    .asistente.activo {
+      display: block;
+    }
+
+    .asistente.error {
+      background: #fef2f2;
+      border-left-color: #e74c3c;
+    }
+
+    .asistente.advertencia {
+      background: #fffbf0;
+      border-left-color: #f39c12;
+    }
+
+    .asistente.exito {
+      background: #f4f0f8;
+      border-left-color: #8e44ad;
+    }
+
+    .asistente-titulo {
+      font-weight: bold;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .asistente.error .asistente-titulo {
+      color: #e74c3c;
+    }
+
+    .asistente.advertencia .asistente-titulo {
+      color: #f39c12;
+    }
+
+    .asistente.exito .asistente-titulo {
+      color: #8e44ad;
+    }
+
+    .asistente-icono {
+      font-size: 18px;
+    }
+
+    .asistente-mensaje {
+      font-size: 13px;
+      line-height: 1.5;
+      color: #555;
+    }
+
+    .asistente-explicacion {
+      background: white;
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .asistente-explicacion strong {
+      color: #8e44ad;
+    }
+
+    /* BOTONES */
+    .botones {
+      display: flex;
+      gap: 10px;
+      margin-top: 30px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      flex: 1;
+    }
+
+    .btn-validar {
+      background: #9b59b6;
+      color: white;
+    }
+
+    .btn-validar:hover {
+      background: #8e44ad;
+    }
+
+    .btn-validar:disabled {
+      background: #bdc3c7;
+      cursor: not-allowed;
+    }
+
+    .btn-limpiar {
+      background: #95a5a6;
+      color: white;
+    }
+
+    .btn-limpiar:hover {
+      background: #7f8c8d;
+    }
+
+    .btn-pdf {
+      background: #3498db;
+      color: white;
+    }
+
+    .btn-pdf:hover {
+      background: #2980b9;
+    }
+
+    /* RESUMEN VALIDACIÓN */
+    .resumen-validacion {
+      background: white;
+      border: 2px solid #9b59b6;
+      padding: 20px;
+      border-radius: 4px;
+      margin-top: 20px;
+      display: none;
+    }
+
+    .resumen-validacion.activo {
+      display: block;
+    }
+
+    .resumen-validacion h3 {
+      margin-bottom: 15px;
+      color: #8e44ad;
+    }
+
+    .resumen-campo {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+      font-size: 13px;
+    }
+
+    .resumen-campo:last-child {
+      border-bottom: none;
+    }
+
+    .resumen-estado {
+      font-weight: bold;
+    }
+
+    .resumen-estado.ok {
+      color: #8e44ad;
+    }
+
+    .resumen-estado.error {
+      color: #e74c3c;
+    }
+
+    /* MEDICAMENTOS */
+    .lista-medicamentos {
+      background: #f4f0f8;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 8px;
+    }
+
+    .medicamento-item {
+      background: white;
+      padding: 8px;
+      margin-bottom: 5px;
+      border-left: 3px solid #9b59b6;
+      border-radius: 3px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .medicamento-item:last-child {
+      margin-bottom: 0;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      .fila {
+        grid-template-columns: 1fr;
+      }
+
+      .documento {
+        padding: 20px;
+      }
+
+      .header h1 {
+        font-size: 18px;
+      }
+
+      .botones {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📋 INFORME DE CONTRARREFERENCIA</h1>
+      <p>Sistema MINSA 2025 - Alta por Referencia/Contrarreferencia (Tipo 4) | Validación automática</p>
+    </div>
+
+    <!-- ASISTENTE VIRTUAL -->
+    <div class="asistente" id="asistente">
+      <div class="asistente-titulo">
+        <span class="asistente-icono">💡</span>
+        <span id="asistente-titulo-texto">Asistencia</span>
+      </div>
+      <div class="asistente-mensaje" id="asistente-mensaje"></div>
+      <div class="asistente-explicacion" id="asistente-explicacion"></div>
+    </div>
+
+    <!-- DOCUMENTO -->
+    <div class="documento">
+      <!-- SECCIÓN 1: ADMINISTRATIVO -->
+      <div class="seccion">
+        <div class="seccion-titulo">📅 Datos Administrativos</div>
+        
+        <div class="fila">
+          <div class="campo">
+            <label for="fechaAlta">Fecha de Alta (Contrarreferencia) *</label>
+            <input type="date" id="fechaAlta" onchange="validarCampo('fechaAlta')">
+            <div class="indicador" id="ind-fechaAlta"></div>
+          </div>
+
+          <div class="campo">
+            <label for="codigoActividad">Código Actividad *</label>
+            <input type="text" id="codigoActividad" value="99217" disabled>
+            <div class="indicador" id="ind-codigoActividad" class="valido">✓ Código fijo</div>
+          </div>
+        </div>
+
+        <div class="fila">
+          <div class="campo">
+            <label for="tipoAlta">Tipo de Alta *</label>
+            <select id="tipoAlta" onchange="validarCampo('tipoAlta')">
+              <option value="">-- Seleccionar --</option>
+              <option value="4">Tipo 4: Ref/Contrarreferencia (transición planificada)</option>
+            </select>
+            <div class="indicador" id="ind-tipoAlta"></div>
+          </div>
+
+          <div class="campo">
+            <label for="establecimientoOrigen">Establecimiento de Origen *</label>
+            <input type="text" id="establecimientoOrigen" placeholder="Ej: CSMC María Auxiliadora" onchange="validarCampo('establecimientoOrigen')">
+            <div class="indicador" id="ind-establecimientoOrigen"></div>
+          </div>
+        </div>
+
+        <div class="campo completa">
+          <label for="establecimientoDestino">Establecimiento Destino (I Nivel receptor) *</label>
+          <input type="text" id="establecimientoDestino" placeholder="Ej: Centro de Salud San Martín" onchange="validarCampo('establecimientoDestino')">
+          <div class="indicador" id="ind-establecimientoDestino"></div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 2: PACIENTE -->
+      <div class="seccion">
+        <div class="seccion-titulo">👤 Datos del Paciente</div>
+        
+        <div class="fila">
+          <div class="campo">
+            <label for="nombrePaciente">Nombre Completo *</label>
+            <input type="text" id="nombrePaciente" placeholder="Ej: Juan Carlos Mendoza López" onchange="validarCampo('nombrePaciente')">
+            <div class="indicador" id="ind-nombrePaciente"></div>
+          </div>
+
+          <div class="campo">
+            <label for="dniPaciente">DNI *</label>
+            <input type="text" id="dniPaciente" placeholder="Ej: 72345678" onchange="validarCampo('dniPaciente')">
+            <div class="indicador" id="ind-dniPaciente"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 3: DIAGNÓSTICO Y EVOLUCIÓN -->
+      <div class="seccion">
+        <div class="seccion-titulo">🔍 Diagnóstico Final y Evolución</div>
+        
+        <div class="campo completa">
+          <label for="diagnosticoFinal">Diagnóstico Final (CIE-10) *</label>
+          <input type="text" id="diagnosticoFinal" placeholder="Ej: F321" onchange="validarCampo('diagnosticoFinal')">
+          <div class="indicador" id="ind-diagnosticoFinal"></div>
+        </div>
+
+        <div class="campo completa">
+          <label for="resumenEvolucion">Resumen de Evolución y Logros *</label>
+          <textarea id="resumenEvolucion" placeholder="Ej: Paciente presentó mejoría progresiva. PHQ-9: 19 → 7 (remisión). Adherencia medicación >90%. Psicoterapia: 12 sesiones individual, buena respuesta." onchange="validarCampo('resumenEvolucion')"></textarea>
+          <div class="indicador" id="ind-resumenEvolucion"></div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 4: MEDICACIÓN -->
+      <div class="seccion">
+        <div class="seccion-titulo">💊 Medicación Continuada en I Nivel *</div>
+        
+        <div class="campo completa">
+          <label for="medicacionNombre">Nombre Medicamento</label>
+          <input type="text" id="medicacionNombre" placeholder="Ej: Sertralina">
+        </div>
+
+        <div class="fila">
+          <div class="campo">
+            <label for="medicacionDosis">Dosis</label>
+            <input type="text" id="medicacionDosis" placeholder="Ej: 50 mg">
+          </div>
+          <div class="campo">
+            <label for="medicacionFrecuencia">Frecuencia</label>
+            <input type="text" id="medicacionFrecuencia" placeholder="Ej: 1 vez/día">
+          </div>
+        </div>
+
+        <button onclick="agregarMedicamento()" style="padding: 8px 16px; background: #9b59b6; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 10px;">➕ Agregar Medicamento</button>
+
+        <div class="lista-medicamentos" id="listaMedicamentos"></div>
+
+        <div class="indicador" id="ind-medicacion"></div>
+      </div>
+
+      <!-- SECCIÓN 5: PLAN SEGUIMIENTO -->
+      <div class="seccion">
+        <div class="seccion-titulo">📊 Plan de Seguimiento en I Nivel</div>
+        
+        <div class="campo completa">
+          <label for="planSeguimiento">Plan Específico de Seguimiento *</label>
+          <textarea id="planSeguimiento" placeholder="Ej: Seguimiento mensual con enfermera. Evaluación clínica + monitoreo medicación." onchange="validarCampo('planSeguimiento')"></textarea>
+          <div class="indicador" id="ind-planSeguimiento"></div>
+        </div>
+
+        <div class="fila">
+          <div class="campo">
+            <label for="frecuenciaSeguimiento">Frecuencia *</label>
+            <select id="frecuenciaSeguimiento" onchange="validarCampo('frecuenciaSeguimiento')">
+              <option value="">-- Seleccionar --</option>
+              <option value="semanal">Semanal</option>
+              <option value="quincenal">Quincenal</option>
+              <option value="mensual">Mensual</option>
+              <option value="bimestral">Bimestral</option>
+              <option value="trimestral">Trimestral</option>
+            </select>
+            <div class="indicador" id="ind-frecuenciaSeguimiento"></div>
+          </div>
+
+          <div class="campo">
+            <label for="fechaProximaconsulta">Fecha Próxima Consulta *</label>
+            <input type="date" id="fechaProximaconsulta" onchange="validarCampo('fechaProximaconsulta')">
+            <div class="indicador" id="ind-fechaProximaconsulta"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 6: INDICADORES RECONSULTA -->
+      <div class="seccion">
+        <div class="seccion-titulo">🚨 Indicadores de Reconsulta Urgente a CSMC</div>
+        
+        <div class="campo completa">
+          <label for="indicadoresReconsulta">¿Cuándo volver a CSMC urgentemente? *</label>
+          <textarea id="indicadoresReconsulta" placeholder="Ej: Si PHQ-9 vuelve >12 puntos. Si ideación suicida reaparece. Si síntomas psicóticos retornan." onchange="validarCampo('indicadoresReconsulta')"></textarea>
+          <div class="indicador" id="ind-indicadoresReconsulta"></div>
+        </div>
+
+        <div class="campo completa">
+          <label for="accesoCSMC">Acceso CSMC (Puerta Abierta)</label>
+          <textarea id="accesoCSMC" placeholder="Ej: Puerta abierta para reconsulta si síntomas reaparecen. Readmisión sin trámites si recaída." onchange="validarCampo('accesoCSMC')"></textarea>
+          <div class="indicador" id="ind-accesoCSMC"></div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 7: EDUCACIÓN FAMILIA -->
+      <div class="seccion">
+        <div class="seccion-titulo">👨‍👩‍👧 Educación a la Familia</div>
+        
+        <div class="campo completa">
+          <label for="educacionFamilia">Orientación a la Familia *</label>
+          <textarea id="educacionFamilia" placeholder="Ej: Familia capacitada en reconocimiento de síntomas de alerta. Plan de crisis: si empeora acudir a CSMC." onchange="validarCampo('educacionFamilia')"></textarea>
+          <div class="indicador" id="ind-educacionFamilia"></div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 8: PROFESIONAL -->
+      <div class="seccion">
+        <div class="seccion-titulo">✍️ Profesional Responsable</div>
+        
+        <div class="fila">
+          <div class="campo">
+            <label for="nombreProfesional">Nombre y Profesión *</label>
+            <input type="text" id="nombreProfesional" placeholder="Ej: Psic. Carlos Ruiz - Psicólogo" onchange="validarCampo('nombreProfesional')">
+            <div class="indicador" id="ind-nombreProfesional"></div>
+          </div>
+
+          <div class="campo">
+            <label for="dniProfesional">DNI Profesional *</label>
+            <input type="text" id="dniProfesional" placeholder="Ej: 87654321" onchange="validarCampo('dniProfesional')">
+            <div class="indicador" id="ind-dniProfesional"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTONES -->
+    <div class="botones">
+      <button class="btn btn-validar" onclick="validarFormularioCompleto()">✓ Validar Todo</button>
+      <button class="btn btn-pdf" onclick="generarPDF()" id="btnPDF" disabled>📥 Descargar PDF</button>
+      <button class="btn btn-limpiar" onclick="limpiarFormulario()">🔄 Limpiar</button>
+    </div>
+
+    <!-- RESUMEN VALIDACIÓN -->
+    <div class="resumen-validacion" id="resumenValidacion">
+      <h3>📋 Resumen de Validación</h3>
+      <div id="resumenContenido"></div>
+    </div>
+  </div>
+
+  <script>
+    let medicamentos = [];
+
+    const camposObligatorios = [
+      'fechaAlta', 'tipoAlta', 'establecimientoOrigen', 'establecimientoDestino',
+      'nombrePaciente', 'dniPaciente',
+      'diagnosticoFinal', 'resumenEvolucion',
+      'planSeguimiento', 'frecuenciaSeguimiento', 'fechaProximaconsulta',
+      'indicadoresReconsulta',
+      'educacionFamilia',
+      'nombreProfesional', 'dniProfesional'
+    ];
+
+    function agregarMedicamento() {
+      const nombre = document.getElementById('medicacionNombre').value.trim();
+      const dosis = document.getElementById('medicacionDosis').value.trim();
+      const frecuencia = document.getElementById('medicacionFrecuencia').value.trim();
+
+      if (!nombre || !dosis || !frecuencia) {
+        alert('Completa todos los datos del medicamento');
+        return;
+      }
+
+      medicamentos.push({ nombre, dosis, frecuencia });
+      mostrarMedicamentos();
+      
+      document.getElementById('medicacionNombre').value = '';
+      document.getElementById('medicacionDosis').value = '';
+      document.getElementById('medicacionFrecuencia').value = '';
+
+      validarCampo('medicacion');
+    }
+
+    function removerMedicamento(index) {
+      medicamentos.splice(index, 1);
+      mostrarMedicamentos();
+      validarCampo('medicacion');
+    }
+
+    function mostrarMedicamentos() {
+      const lista = document.getElementById('listaMedicamentos');
+      if (medicamentos.length === 0) {
+        lista.innerHTML = '<p style="color: #999; font-size: 12px;">Sin medicamentos agregados</p>';
+        return;
+      }
+
+      lista.innerHTML = medicamentos.map((med, idx) => `
+        <div class="medicamento-item">
+          <span><strong>${med.nombre}</strong> - ${med.dosis} (${med.frecuencia})</span>
+          <button onclick="removerMedicamento(${idx})" style="background: #e74c3c; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px;">✕</button>
+        </div>
+      `).join('');
+    }
+
+    function validarCampo(idCampo) {
+      const campo = document.getElementById(idCampo);
+      const indicador = document.getElementById('ind-' + idCampo);
+      const valor = campo ? campo.value.trim() : '';
+
+      let resultado = { valido: false, mensaje: '', tipo: 'neutro' };
+
+      if (idCampo === 'medicacion') {
+        if (medicamentos.length === 0) {
+          resultado.tipo = 'advertencia';
+          resultado.mensaje = 'Agregar al menos 1 medicamento';
+        } else {
+          resultado.valido = true;
+          resultado.tipo = 'valido';
+          resultado.mensaje = `${medicamentos.length} medicamento(s) agregado(s)`;
+        }
+      } else if (idCampo === 'dniPaciente' || idCampo === 'dniProfesional') {
+        if (!valor) {
+          resultado.tipo = 'error';
+          resultado.mensaje = 'DNI requerido';
+        } else if (!/^\d{7,8}$/.test(valor)) {
+          resultado.tipo = 'error';
+          resultado.mensaje = 'DNI: 7-8 dígitos';
+        } else {
+          resultado.valido = true;
+          resultado.tipo = 'valido';
+          resultado.mensaje = 'DNI válido';
+        }
+      } else if (idCampo === 'fechaAlta' || idCampo === 'fechaProximaconsulta') {
+        if (!valor) {
+          resultado.tipo = 'error';
+          resultado.mensaje = 'Fecha requerida';
+        } else {
+          resultado.valido = true;
+          resultado.tipo = 'valido';
+          resultado.mensaje = 'Fecha válida';
+        }
+      } else {
+        if (camposObligatorios.includes(idCampo) && !valor) {
+          resultado.tipo = 'error';
+          resultado.mensaje = 'Campo requerido';
+        } else if (valor) {
+          if (valor.length < 5) {
+            resultado.tipo = 'advertencia';
+            resultado.mensaje = 'Información incompleta';
+          } else {
+            resultado.valido = true;
+            resultado.tipo = 'valido';
+            resultado.mensaje = 'OK';
+          }
+        }
+      }
+
+      if (campo) {
+        campo.classList.remove('valido', 'error', 'advertencia');
+        if (resultado.tipo !== 'neutro') {
+          campo.classList.add(resultado.tipo);
+        }
+      }
+
+      indicador.classList.remove('valido', 'error', 'advertencia', 'neutro');
+      if (resultado.tipo !== 'neutro') {
+        indicador.classList.add(resultado.tipo);
+        indicador.textContent = resultado.mensaje;
+      } else {
+        indicador.classList.add('neutro');
+      }
+
+      return resultado;
+    }
+
+    function validarFormularioCompleto() {
+      const asistente = document.getElementById('asistente');
+      const titulo = document.getElementById('asistente-titulo-texto');
+      const mensaje = document.getElementById('asistente-mensaje');
+      const explicacion = document.getElementById('asistente-explicacion');
+      const resumen = document.getElementById('resumenValidacion');
+      const resumenContenido = document.getElementById('resumenContenido');
+
+      let errores = [];
+
+      camposObligatorios.forEach(campo => {
+        const resultado = validarCampo(campo);
+        if (!resultado.valido && resultado.tipo === 'error') {
+          errores.push(campo);
+        }
+      });
+
+      validarCampo('medicacion');
+
+      if (errores.length === 0 && medicamentos.length > 0) {
+        asistente.classList.add('activo', 'exito');
+        asistente.classList.remove('error', 'advertencia');
+        titulo.textContent = '✓ Contrarreferencia válida';
+        mensaje.textContent = 'Documento completo y correcto según protocolo MINSA';
+        explicacion.innerHTML = '<strong>Protocolo Tipo 4:</strong> Alta por referencia/contrarreferencia con transición planificada a I Nivel.';
+        
+        document.getElementById('btnPDF').disabled = false;
+        resumen.classList.add('activo');
+      } else {
+        asistente.classList.add('activo', 'error');
+        asistente.classList.remove('exito', 'advertencia');
+        titulo.textContent = '✗ Errores encontrados';
+        mensaje.textContent = `${errores.length} campo(s) con error`;
+        explicacion.innerHTML = `<strong>Por favor corrige:</strong><br>${errores.join(', ')}`;
+        document.getElementById('btnPDF').disabled = true;
+        resumen.classList.remove('activo');
+      }
+    }
+
+    function generarPDF() {
+      const nombrePaciente = document.getElementById('nombrePaciente').value;
+      const dniPaciente = document.getElementById('dniPaciente').value;
+      const contenido = document.querySelector('.documento').innerHTML;
+
+      const ventana = window.open('', '', 'width=900,height=600');
+      ventana.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Contrarreferencia ${dniPaciente}</title>
+          <style>
+            body { font-family: Arial; margin: 20px; }
+            .documento { border: 1px solid #9b59b6; padding: 20px; }
+            .seccion { margin-bottom: 20px; border-left: 4px solid #9b59b6; padding-left: 10px; }
+            input, select, textarea { border: 1px solid #ccc; padding: 5px; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          ${contenido}
+          <p style="margin-top: 40px; text-align: right;">
+            ________________________<br>
+            Firma y Sello<br>
+            ${document.getElementById('nombreProfesional').value}
+          </p>
+        </body>
+        </html>
+      `);
+      ventana.document.close();
+      ventana.print();
+    }
+
+    function limpiarFormulario() {
+      document.querySelectorAll('input, select, textarea').forEach(campo => {
+        if (campo.id !== 'codigoActividad') {
+          campo.value = '';
+          campo.classList.remove('valido', 'error', 'advertencia');
+        }
+      });
+      document.querySelectorAll('.indicador').forEach(ind => {
+        ind.classList.remove('valido', 'error', 'advertencia', 'neutro');
+        ind.textContent = '';
+      });
+      medicamentos = [];
+      mostrarMedicamentos();
+      document.getElementById('asistente').classList.remove('activo');
+      document.getElementById('resumenValidacion').classList.remove('activo');
+      document.getElementById('btnPDF').disabled = true;
+    }
+
+    // Inicializar
+    mostrarMedicamentos();
+  </script>
+</body>
+</html>
